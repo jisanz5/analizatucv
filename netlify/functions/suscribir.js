@@ -13,24 +13,13 @@ exports.handler = async (event) => {
       return {
         statusCode: 500,
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: 'Missing configuration' })
+        body: JSON.stringify({ error: 'Missing config', apiKey: !!apiKey, listId: !!listId })
       };
     }
 
     const dc = apiKey.split('-').pop();
     const credentials = Buffer.from(`anystring:${apiKey}`).toString('base64');
-
     const url = `https://${dc}.api.mailchimp.com/3.0/lists/${listId}/members`;
-
-    const payload = {
-      email_address: email,
-      status: 'subscribed',
-      tags: ['Analizador-CV']
-    };
-
-    if (score !== undefined) {
-      payload.merge_fields = { SCORE: String(score) };
-    }
 
     const response = await fetch(url, {
       method: 'POST',
@@ -38,25 +27,25 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${credentials}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        email_address: email,
+        status: 'subscribed',
+        tags: ['Analizador-CV']
+      })
     });
 
     const data = await response.json();
 
-    // 200 = nuevo suscriptor, 400 con Member Exists = ya estaba suscrito (ambos OK)
-    if (response.ok || (response.status === 400 && data.title === 'Member Exists')) {
-      return {
-        statusCode: 200,
-        headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ success: true })
-      };
-    }
-
-    // Cualquier otro error de Mailchimp
     return {
-      statusCode: 400,
+      statusCode: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: data.detail || data.title || 'Mailchimp error' })
+      body: JSON.stringify({ 
+        success: response.ok,
+        status: response.status,
+        mailchimp_response: data,
+        dc: dc,
+        listId: listId
+      })
     };
 
   } catch (err) {
