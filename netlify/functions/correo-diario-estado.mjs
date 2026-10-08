@@ -37,6 +37,24 @@ export default async (req) => {
     }
   }
 
+  // Envío inmediato del correo de hoy a la lista (solo por POST, desde el botón de esta página)
+  if (req.method === 'POST' && url.searchParams.get('enviar') === 'hoy') {
+    if (!ajustes.activo || !ajustes.listaGeneralId) return pagina('<h1>Enviar ahora</h1><p class="no">El envío está desactivado o falta la audiencia general.</p>');
+    const correo = correoDelDia(ahora.fecha);
+    if (!correo) return pagina('<h1>Enviar ahora</h1><p class="no">No hay correo para hoy en la cola.</p>');
+    try {
+      const yaEnviado = (await mc.diariosRecientes(ajustes.listaGeneralId)).find(c => c.titulo === titulo(correo) && c.estado !== 'save');
+      if (yaEnviado) return pagina(`<h1>Enviar ahora</h1><p class="no">El correo de hoy ya se envió (${esc(yaEnviado.estado)}). No se repite.</p>`);
+      const id = await mc.crearCampania(ajustes.listaGeneralId, correo);
+      await mc.llamar('POST', `/campaigns/${id}/actions/send`);
+      console.log(`[correo-diario-estado] Enviado ahora el correo ${correo.id} (campaña ${id})`);
+      return pagina(`<h1>Enviado</h1><p class="ok">El correo ${correo.id}, "${esc(correo.asunto)}", se está enviando a tu lista.</p><p>A las 16:10 no se repetirá.</p>`);
+    } catch (err) {
+      console.error(err);
+      return pagina(`<h1>Enviar ahora</h1><p class="no">Error: ${esc(err.message)}</p>`);
+    }
+  }
+
   let audiencias = [], recientes = [], error = '';
   try {
     audiencias = await mc.audiencias();
@@ -59,5 +77,8 @@ ${error ? `<p class="no">Error con Mailchimp: ${esc(error)}</p>` : ''}
 <h2>Próximos correos</h2><table><tr><th>Fecha</th><th>Asunto</th></tr>${filasProx || '<tr><td colspan="2" class="no">La cola está vacía</td></tr>'}</table>
 <h2>Audiencias de Mailchimp</h2><table><tr><th>Nombre</th><th>Id</th><th>Suscriptores</th></tr>${filasAud}</table>
 <h2>Últimos envíos</h2><table><tr><th>Campaña</th><th>Estado</th></tr>${filasEnv || '<tr><td colspan="2">Todavía ninguno</td></tr>'}</table>
-<p><a href="?prueba=1">Mandarme el próximo correo como prueba</a> (solo a ${esc(ajustes.emailPrueba)})</p>`);
+<p><a href="?prueba=1">Mandarme el próximo correo como prueba</a> (solo a ${esc(ajustes.emailPrueba)})</p>
+${ajustes.activo && ajustes.listaGeneralId && hoy && !recientes.some(c => c.titulo === titulo(hoy) && c.estado !== 'save')
+  ? `<form method="post" action="?enviar=hoy" onsubmit="return confirm('¿Enviar ya el correo de hoy a toda la lista?')"><button style="font-size:15px;padding:8px 14px;margin-top:8px">Enviar ya el correo de hoy a toda la lista</button></form>`
+  : ''}`);
 };
