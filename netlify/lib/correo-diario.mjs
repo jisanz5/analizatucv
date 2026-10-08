@@ -1,0 +1,89 @@
+// Lógica compartida del correo diario: fecha de Madrid, cola, y llamadas a Mailchimp.
+
+import cola from '../../correos/cola.mjs';
+import config from '../../correos/config.mjs';
+
+export { cola, config };
+
+export function ahoraMadrid(fecha = new Date()) {
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Madrid',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', hour12: false, weekday: 'short'
+    }).formatToParts(fecha).map(p => [p.type, p.value])
+  );
+  return {
+    fecha: `${partes.year}-${partes.month}-${partes.day}`,
+    hora: Number(partes.hour) % 24,
+    diaSemana: partes.weekday // Mon, Tue...
+  };
+}
+
+export function correoDelDia(fecha) {
+  return cola.find(c => c.fecha === fecha) || null;
+}
+
+export function proximos(fecha, n = 3) {
+  return cola.filter(c => c.fecha >= fecha).sort((a, b) => a.fecha.localeCompare(b.fecha)).slice(0, n);
+}
+
+export function titulo(correo) {
+  return `Diario ${correo.fecha} · ${correo.id}`;
+}
+
+function cuerpoConPie(correo) {
+  return `${correo.cuerpo}\n\n--\nRecibes este correo porque te apuntaste en estoybuscandotrabajo.com.\nSi no quieres recibir más: *|UNSUB|*\n*|LIST:ADDRESSLINE|*`;
+}
+
+export function mailchimp() {
+  const apiKey = process.env.MAILCHIMP_API_KEY;
+  if (!apiKey) throw new Error('Falta MAILCHIMP_API_KEY');
+  const base = `https://${apiKey.split('-').pop()}.api.mailchimp.com/3.0`;
+  const auth = 'Basic ' + Buffer.from(`anystring:${apiKey}`).toString('base64');
+
+  async function llamar(metodo, ruta, cuerpo) {
+    const res = await fetch(base + ruta, {
+      method: metodo,
+      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      body: cuerpo ? JSON.stringify(cuerpo) : undefined
+    });
+    const texto = await res.text();
+    const datos = texto ? JSON.parse(texto) : {};
+    if (!res.ok) throw new Error(`Mailchimp ${metodo} ${ruta}: ${res.status} ${datos.title || ''} ${datos.detail || ''}`.trim());
+    return datos;
+  }
+
+  return {
+    llamar,
+
+    audiencias: async () => {
+      const r = await llamar('GET', '/lists?count=50&fields=lists.id,lists.name,lists.stats.member_count');
+      return r.lists.map(l => ({ id: l.id, nombre: l.name, suscriptores: l.stats.member_count }));
+    },
+
+    // Campañas recientes de una audiencia cuyo título empieza por "Diario "
+    diariosRecientes: async (listId) => {
+      const r = await llamar('GET', `/campaigns?count=50&sort_field=create_time&sort_dir=DESC&list_id=${listId}&fields=campaigns.id,campaigns.status,campaigns.settings.title,campaigns.send_time`);
+      return r.campaigns
+        .filter(c => (c.settings.title || '').startsWith('Diario '))
+        .map(c => ({ id: c.id, titulo: c.settings.title, estado: c.status, enviado: c.send_time || null }));
+    },
+
+    crearCampania: async (listId, correo, { tituloExtra = '' } = {}) => {
+      const c = await llamar('POST', '/campaigns', {
+        type: 'plaintext',
+        recipients: { list_id: listId },
+        settings: {
+          subject_line: correo.asunto,
+          title: titulo(correo) + tituloExtra,
+          from_name: config.remitente,
+          reply_to: config.responderA
+        },
+        tracking: { opens: false, text_clicks: true }
+      });
+      await llamar('PUT', `/campaigns/${c.id}/content`, { plain_text: cuerpoConPie(correo) });
+      return c.id;
+    }
+  };
+}
