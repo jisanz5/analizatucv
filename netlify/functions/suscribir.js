@@ -102,13 +102,23 @@ exports.handler = async (event) => {
     console.log('Mailchimp: contacto en estado', miembro.status);
 
     // Guarda el nivel en el campo NIVEL de la audiencia, para el bloque final condicional
-    // de los correos. Si el campo aún no existe en Mailchimp, se registra y se sigue.
+    // de los correos. Si el campo aún no existe en Mailchimp, lo crea y lo vuelve a intentar.
     if (nivel) {
-      const campo = await fetch(base, {
+      const guardarNivel = () => fetch(base, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: auth },
         body: JSON.stringify({ merge_fields: { NIVEL: nivel } })
       });
+      let campo = await guardarNivel();
+      if (!campo.ok) {
+        const creado = await fetch(`https://${dc}.api.mailchimp.com/3.0/lists/${listId}/merge-fields`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: auth },
+          body: JSON.stringify({ name: 'Nivel', tag: 'NIVEL', type: 'text', required: false, public: false })
+        });
+        console.log('Mailchimp: creación del campo NIVEL', creado.status);
+        campo = await guardarNivel();
+      }
       if (!campo.ok) {
         const err = await campo.json().catch(() => ({}));
         console.error('Error de Mailchimp (campo NIVEL)', campo.status, err.title, err.detail);
