@@ -88,17 +88,31 @@ exports.handler = async (event) => {
     const hash = crypto.createHash('md5').update(email).digest('hex');
     const base = `https://${dc}.api.mailchimp.com/3.0/lists/${listId}/members/${hash}`;
 
-    // Crea o actualiza el contacto. Si alguien se dio de baja antes, no lo volvemos a dar de alta a la fuerza:
-    // Mailchimp le pedirá confirmar de nuevo.
+    // Crea el contacto si es nuevo; si ya existía, no toca su estado.
     const alta = await fetch(base, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: auth },
       body: JSON.stringify({ email_address: email, status_if_new: 'subscribed' })
     });
+    const miembro = await alta.json().catch(() => ({}));
     if (!alta.ok) {
-      const err = await alta.json().catch(() => ({}));
-      console.error('Error de Mailchimp (alta)', alta.status, err.title, err.detail);
+      console.error('Error de Mailchimp (alta)', alta.status, miembro.title, miembro.detail);
       return respuesta(502, headers, { error: 'No se pudo completar la suscripción' });
+    }
+    console.log('Mailchimp: contacto en estado', miembro.status);
+
+    // Si se había dado de baja y ahora vuelve a marcar la casilla, Mailchimp le manda
+    // un email para confirmar. Al confirmar, queda suscrito de nuevo.
+    if (miembro.status === 'unsubscribed') {
+      const reactivar = await fetch(base, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify({ status: 'pending' })
+      });
+      if (!reactivar.ok) {
+        const err = await reactivar.json().catch(() => ({}));
+        console.error('Error de Mailchimp (reactivar)', reactivar.status, err.title, err.detail);
+      }
     }
 
     // Las etiquetas se añaden aparte: en un PUT, Mailchimp las ignora si el contacto ya existía
