@@ -32,8 +32,17 @@ export function titulo(correo) {
   return `Diario ${correo.fecha} · ${correo.id}`;
 }
 
+const WEB = 'https://www.estoybuscandotrabajo.com';
+
+// Añade la web debajo de la firma "Jesús". Si el correo no tiene esa firma, la pone al final.
+function conFirma(cuerpo) {
+  const firma = /\n\nJesús(\n\n|$)/;
+  if (firma.test(cuerpo)) return cuerpo.replace(firma, (m, fin) => `\n\nJesús\n${WEB}${fin}`);
+  return `${cuerpo}\n\nJesús\n${WEB}`;
+}
+
 function cuerpoConPie(correo) {
-  return `${correo.cuerpo}\n\n--\nRecibes este correo porque te apuntaste en estoybuscandotrabajo.com.\nSi no quieres recibir más: *|UNSUB|*\n*|LIST:ADDRESSLINE|*`;
+  return `${conFirma(correo.cuerpo)}\n\n--\nRecibes este correo porque te apuntaste en estoybuscandotrabajo.com.\nSi no quieres recibir más: *|UNSUB|*\n*|LIST:ADDRESSLINE|*`;
 }
 
 export function mailchimp() {
