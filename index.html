@@ -548,6 +548,9 @@ input[type="email"]::placeholder { color: var(--muted); }
   background: #f0fdf7; border-radius: var(--r);
   margin-top: 8px;
 }
+.consent-row { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; color: var(--muted); line-height: 1.6; margin: 4px 0 10px; cursor: pointer; text-align: left; }
+.consent-row input { margin-top: 3px; flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; }
+.consent-row a { color: inherit; text-decoration: underline; }
 .email-err { font-size: 12px; color: var(--red); margin-top: 6px; display: none; }
 .skip-link {
   display: block; font-size: 12px; color: var(--muted);
@@ -852,6 +855,10 @@ footer a:hover { color: var(--text); }
       <input type="email" id="email-input" placeholder="tu@email.com">
       <button class="btn btn-sm" id="btn-email" onclick="suscribirEmail()">Quiero los 30 consejos</button>
     </div>
+    <label class="consent-row" id="consent-row">
+      <input type="checkbox" id="consent-check">
+      <span>Acepto recibir por email consejos y ofertas de estoybuscandotrabajo.com. Puedo darme de baja cuando quiera. <a href="https://www.estoybuscandotrabajo.com/politica-privacidad/" target="_blank" rel="noopener">Política de privacidad</a>.</span>
+    </label>
     <div class="email-success" id="email-success">✓ &nbsp;Perfecto, en unos minutos recibes el primero</div>
     <div class="email-err" id="email-error-msg"></div>
     <button class="skip-link" onclick="saltarEmail()">No gracias, prefiero seguir sin los consejos</button>
@@ -938,94 +945,17 @@ footer a:hover { color: var(--text); }
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-const MAILCHIMP_API_KEY = '9207a5b14cf964461aad657c8fa8b93c-us13';
-const MAILCHIMP_LIST_ID = '03436f5b5b';
-const MAILCHIMP_DC = 'us13';
-
-const SYSTEM_PROMPT = `Eres un headhunter senior con más de 8 años de experiencia en el mercado laboral español. Has revisado miles de CVs de todos los sectores y perfiles — ventas, tecnología, marketing, finanzas, operaciones, recursos humanos, ingeniería, consultoría y más. Sabes exactamente qué hace que un reclutador descarte un CV en los primeros 6 segundos, independientemente del sector.
-
-Tu tarea es analizar el CV que te proporcionan y devolver un diagnóstico honesto, preciso y específico. No eres condescendiente ni haces comentarios motivacionales vacíos. Hablas como un profesional que ve el CV por primera vez y tiene 30 segundos para decidir si pasa o no pasa.
-
-PASO 0 — VERIFICACIÓN DEL DOCUMENTO:
-Antes de analizar nada, determina si el documento es realmente un CV o currículum vitae.
-Un CV contiene información personal, experiencia laboral, formación y/o habilidades de una persona.
-Si el documento NO es un CV (es una factura, contrato, artículo, imagen, texto aleatorio, catálogo, o cualquier otra cosa), responde ÚNICAMENTE con este JSON y nada más:
-{
-  "es_cv": false
-}
-
-Si el documento SÍ es un CV, continúa con el análisis completo e incluye "es_cv": true en el JSON de respuesta.
-
-INSTRUCCIONES DE ANÁLISIS:
-
-Primero, identifica el sector y tipo de perfil del candidato a partir del CV. Adapta tu evaluación a ese contexto específico.
-
-Evalúa el CV en 5 dimensiones. Para cada una asigna una puntuación de 0 a 100:
-
-1. IMPACTO_LOGROS (peso 25%)
-Busca: logros concretos y cuantificados, verbos de acción orientados a resultado, contribuciones medibles.
-Penaliza: descripciones de responsabilidades sin resultados, frases genéricas como "participé en", "colaboré con", "apoyé al equipo", "responsable de".
-Aplica criterio al sector: en ventas busca cifras de cuota y pipeline; en tech busca proyectos con impacto; en marketing busca métricas de campaña; en operaciones busca mejoras de eficiencia; etc.
-Si no hay ni un solo logro cuantificado en todo el CV, la puntuación no puede superar 40.
-
-2. KEYWORDS_ATS (peso 20%)
-Evalúa si el CV contiene la terminología relevante para el sector y nivel del candidato.
-Los sistemas ATS filtran por palabras clave específicas del sector — evalúa si el CV las incluye de forma natural.
-Penaliza la ausencia de términos propios del sector cuando la experiencia claramente los requiere.
-
-3. CLARIDAD_ESTRUCTURA (peso 20%)
-Busca: jerarquía visual clara, secciones bien diferenciadas, longitud apropiada (1 página junior / 2 páginas senior), formato limpio y escaneable.
-Penaliza: bloques de texto sin estructura, ausencia de secciones clave, formato confuso o excesivamente largo.
-
-4. COHERENCIA_NARRATIVA (peso 20%)
-Busca: progresión lógica de carrera, hilo conductor entre experiencias, evolución profesional clara.
-Penaliza: saltos sin explicar, huecos temporales sin contexto, cambios de sector frecuentes sin narrativa coherente.
-
-5. PROPUESTA_DE_VALOR (peso 15%)
-Evalúa si el CV comunica claramente qué aporta este candidato y qué le diferencia.
-Busca: extracto o perfil profesional potente, especialización clara, propuesta de valor diferenciada.
-Penaliza: extracto genérico o ausente, CV que podría ser de cualquier persona, falta de personalidad profesional.
-
-CÁLCULO DEL SCORE FINAL:
-score_final = (impacto_logros * 0.25) + (keywords_ats * 0.20) + (claridad_estructura * 0.20) + (coherencia_narrativa * 0.20) + (propuesta_de_valor * 0.15)
-Redondea al entero más cercano.
-
-IDENTIFICACIÓN DE PROBLEMAS:
-Identifica exactamente 3 problemas, del más grave al menos grave.
-Cada problema debe ser específico (menciona algo concreto del CV), honesto y sin dar la solución concreta.
-
-VEREDICTO: Una frase de 10-15 palabras, directa, que resuma el estado real del CV para el perfil detectado.
-
-RESPONDE ÚNICAMENTE CON JSON VÁLIDO. Sin texto antes ni después.
-
-Estructura exacta para un CV válido:
-{
-  "es_cv": true,
-  "score_final": 62,
-  "dimensiones": {
-    "impacto_logros": 35,
-    "keywords_ats": 48,
-    "claridad_estructura": 74,
-    "coherencia_narrativa": 70,
-    "propuesta_de_valor": 52
-  },
-  "veredicto": "CV ordenado pero sin un solo argumento para contratarte antes que a otro.",
-  "problemas": [
-    {
-      "titulo": "Sin logros, solo tareas",
-      "descripcion": "En 5 años de experiencia no aparece un solo resultado concreto. Describes lo que hacías, no lo que conseguiste. Un reclutador no puede justificar tu candidatura sin números o logros que respalden tu valía.",
-      "dimension_afectada": "impacto_logros",
-      "gravedad": "alta"
-    }
-  ],
-  "puntos_fuertes": [
-    "Estructura clara y fácil de leer.",
-    "Trayectoria coherente sin saltos inexplicables."
-  ]
-}`;
+// El prompt de análisis vive en el servidor (netlify/functions/analizar.js).
 
 let cvTextoFinal = '';
 let scoreActual = 0;
+let perfilActual = { nivel: '', sector: '', problemas: [] };
+
+const TEXTO_CONSENTIMIENTO = 'Acepto recibir por email consejos y ofertas de estoybuscandotrabajo.com. Puedo darme de baja cuando quiera.';
+
+function esc(t) {
+  return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 const zone = document.getElementById('upload-zone');
 zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
@@ -1142,13 +1072,7 @@ async function analizarCV() {
     const response = await fetch('/.netlify/functions/analizar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 1200,
-        temperature: 0,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: `CV del candidato:\n${textoFinal.substring(0, 12000)}` }]
-      })
+      body: JSON.stringify({ cv: textoFinal.substring(0, 12000) })
     });
     if (!response.ok) throw new Error(`API error ${response.status}`);
     data = await response.json();
@@ -1161,7 +1085,7 @@ async function analizarCV() {
 
   let resultado;
   try {
-    const raw = data.content[0].text.trim();
+    const raw = (data.texto || '').trim();
     resultado = JSON.parse(raw.replace(/```json|```/g, '').trim());
   } catch {
     document.getElementById('loading').style.display = 'none';
@@ -1183,6 +1107,11 @@ async function analizarCV() {
 function renderResultados(r) {
   const score = Math.round(r.score_final);
   scoreActual = score;
+  perfilActual = {
+    nivel: r.nivel || '',
+    sector: r.sector || '',
+    problemas: (r.problemas || []).map(p => p.titulo).filter(Boolean)
+  };
   const color = getColorScore(score);
   const offset = 251.2 - (score / 100) * 251.2;
 
@@ -1217,7 +1146,7 @@ function renderResultados(r) {
     const row = document.createElement('div');
     row.className = 'dim-row';
     row.innerHTML = `
-      <span class="dim-name">${dimNames[key] || key}</span>
+      <span class="dim-name">${esc(dimNames[key] || key)}</span>
       <div class="dim-bg"><div class="dim-fill" data-w="${v}" style="background:${getColorDim(v)};"></div></div>
       <span class="dim-num">${v}</span>`;
     dimList.appendChild(row);
@@ -1235,10 +1164,10 @@ function renderResultados(r) {
     el.style.animationDelay = `${.1 + i * .08}s`;
     el.innerHTML = `
       <div class="problem-top">
-        <span class="problem-title">${p.titulo}</span>
-        <span class="badge ${isAlta ? 'badge-alta' : 'badge-media'}">${p.gravedad}</span>
+        <span class="problem-title">${esc(p.titulo)}</span>
+        <span class="badge ${isAlta ? 'badge-alta' : 'badge-media'}">${esc(p.gravedad)}</span>
       </div>
-      <p class="problem-desc">${p.descripcion}</p>
+      <p class="problem-desc">${esc(p.descripcion)}</p>
       <div class="problem-lock">🔒 &nbsp;Cómo solucionarlo — revisión profesional</div>`;
     problemsList.appendChild(el);
   });
@@ -1272,18 +1201,31 @@ async function suscribirEmail() {
     errorEl.textContent = 'Introduce un email válido.';
     errorEl.style.display = 'block'; return;
   }
+  if (!document.getElementById('consent-check').checked) {
+    errorEl.textContent = 'Marca la casilla para poder enviarte los consejos.';
+    errorEl.style.display = 'block'; return;
+  }
   btn.disabled = true; btn.textContent = 'Enviando…';
 
   try {
     const response = await fetch('/.netlify/functions/suscribir', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, score: scoreActual })
+      body: JSON.stringify({
+        email,
+        consentimiento: true,
+        texto_consentimiento: TEXTO_CONSENTIMIENTO,
+        score: scoreActual,
+        nivel: perfilActual.nivel,
+        sector: perfilActual.sector,
+        problemas: perfilActual.problemas
+      })
     });
     if (response.ok) {
       successEl.style.display = 'flex';
       emailInput.style.display = 'none';
       btn.style.display = 'none';
+      document.getElementById('consent-row').style.display = 'none';
       document.querySelector('.skip-link').style.display = 'none';
       setTimeout(mostrarCTA, 2000);
     } else { throw new Error(); }
@@ -1307,6 +1249,7 @@ function mostrarCTA() {
 
 function resetForm() {
   cvTextoFinal = ''; scoreActual = 0;
+  perfilActual = { nivel: '', sector: '', problemas: [] };
   document.getElementById('cv-text').value = '';
   document.getElementById('cv-file').value = '';
   document.getElementById('upload-idle').style.display = 'block';
@@ -1320,6 +1263,8 @@ function resetForm() {
   document.getElementById('btn-email').disabled = false;
   document.getElementById('btn-email').textContent = 'Quiero los 30 consejos';
   document.querySelector('.skip-link').style.display = 'block';
+  document.getElementById('consent-check').checked = false;
+  document.getElementById('consent-row').style.display = 'flex';
   document.getElementById('bio-card').style.display = 'none';
   document.getElementById('cta-card').style.display = 'none';
   ocultarError();
