@@ -1,10 +1,11 @@
 // Ajustes del correo diario.
-// activo: mientras sea false, la función programada no envía nada a la lista.
-// listaGeneralId: id de la audiencia general de Mailchimp (no la del analizador).
+// activo: mientras sea false, no se envía nada a ninguna audiencia.
+// audiencias: 'todas' manda el correo a todas las audiencias de Mailchimp (una campaña por audiencia);
+//             también puede ser una lista de ids concretos, por ejemplo ['03436f5b5b'].
 
 export default {
-  activo: false,
-  listaGeneralId: '',
+  activo: true,
+  audiencias: 'todas',
   remitente: 'Jesús Ignacio',
   responderA: 'jesus@estoybuscandotrabajo.com',
   emailPrueba: 'jesusignacio@saanz.es',

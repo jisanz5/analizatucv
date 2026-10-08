@@ -45,6 +45,31 @@ function cuerpoConPie(correo) {
   return `${conFirma(correo.cuerpo)}\n\n--\nRecibes este correo porque te apuntaste en estoybuscandotrabajo.com.\nSi no quieres recibir más: *|UNSUB|*\n*|LIST:ADDRESSLINE|*`;
 }
 
+// Ids de las audiencias a las que va el correo diario
+export async function listasDestino(mc) {
+  if (config.audiencias === 'todas') return (await mc.audiencias()).map(a => a.id);
+  return Array.isArray(config.audiencias) ? config.audiencias : [];
+}
+
+// Envía el correo a cada audiencia destino, sin repetir en las que ya se envió.
+// Devuelve una línea de resultado por audiencia.
+export async function enviarATodas(mc, correo) {
+  const resultados = [];
+  for (const listId of await listasDestino(mc)) {
+    try {
+      const yaEnviado = (await mc.diariosRecientes(listId)).find(c => c.titulo === titulo(correo) && c.estado !== 'save');
+      if (yaEnviado) { resultados.push(`${listId}: ya enviado antes (${yaEnviado.estado}), no se repite`); continue; }
+      const id = await mc.crearCampania(listId, correo);
+      await mc.llamar('POST', `/campaigns/${id}/actions/send`);
+      resultados.push(`${listId}: enviado (campaña ${id})`);
+    } catch (err) {
+      console.error(err);
+      resultados.push(`${listId}: ERROR ${err.message}`);
+    }
+  }
+  return resultados;
+}
+
 export function mailchimp() {
   const apiKey = process.env.MAILCHIMP_API_KEY;
   if (!apiKey) throw new Error('Falta MAILCHIMP_API_KEY');
