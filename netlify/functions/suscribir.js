@@ -101,6 +101,20 @@ exports.handler = async (event) => {
     }
     console.log('Mailchimp: contacto en estado', miembro.status);
 
+    // Guarda el nivel en el campo NIVEL de la audiencia, para el bloque final condicional
+    // de los correos. Si el campo aún no existe en Mailchimp, se registra y se sigue.
+    if (nivel) {
+      const campo = await fetch(base, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify({ merge_fields: { NIVEL: nivel } })
+      });
+      if (!campo.ok) {
+        const err = await campo.json().catch(() => ({}));
+        console.error('Error de Mailchimp (campo NIVEL)', campo.status, err.title, err.detail);
+      }
+    }
+
     // Si se había dado de baja y ahora vuelve a marcar la casilla, Mailchimp le manda
     // un email para confirmar. Al confirmar, queda suscrito de nuevo.
     if (miembro.status === 'unsubscribed') {
