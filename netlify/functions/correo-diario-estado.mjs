@@ -52,7 +52,7 @@ export default async (req) => {
 
   return pagina(`
 <h1>Correo diario</h1>
-<p>Hoy en Madrid: <b>${ahora.fecha}</b>. Envío a las ${ajustes.horaEnvioMadrid}:15 de lunes a viernes.</p>
+<p>Hoy en Madrid: <b>${ahora.fecha}</b>. Envío a las ${ajustes.horaEnvioMadrid}:${String(ajustes.minutoEnvioMadrid).padStart(2,'0')} de lunes a viernes.</p>
 <p>Estado: ${ajustes.activo ? '<b class="ok">ACTIVO</b>' : '<b class="no">DESACTIVADO</b> (no se envía nada a la lista)'}</p>
 <p>Correo de hoy: ${hoy ? `${hoy.id} · "${esc(hoy.asunto)}"` : '<span class="no">ninguno</span>'}</p>
 ${error ? `<p class="no">Error con Mailchimp: ${esc(error)}</p>` : ''}

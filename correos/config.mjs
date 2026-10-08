@@ -8,5 +8,6 @@ export default {
   remitente: 'Jesús Ignacio',
   responderA: 'jesus@estoybuscandotrabajo.com',
   emailPrueba: 'jesusignacio@saanz.es',
-  horaEnvioMadrid: 7
+  horaEnvioMadrid: 16,
+  minutoEnvioMadrid: 10
 };

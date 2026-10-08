@@ -1,6 +1,6 @@
 // Envío automático del correo diario a la audiencia general de Mailchimp.
-// Se ejecuta de lunes a viernes a las 5:15 y 6:15 UTC; solo envía en la ejecución que cae
-// a las 7:xx de Madrid (así funciona igual en horario de verano y de invierno).
+// Se ejecuta de lunes a viernes a las 14:10 y 15:10 UTC; solo envía en la ejecución que cae
+// a las 16:10 de Madrid (así funciona igual en horario de verano y de invierno).
 
 import { ahoraMadrid, correoDelDia, titulo, mailchimp, config as ajustes } from '../lib/correo-diario.mjs';
 
@@ -31,5 +31,5 @@ export default async () => {
 };
 
 export const config = {
-  schedule: '15 5,6 * * 1-5'
+  schedule: '10 14,15 * * 1-5'
 };
