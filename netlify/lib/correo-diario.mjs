@@ -33,16 +33,51 @@ export function titulo(correo) {
 }
 
 const WEB = 'https://www.estoybuscandotrabajo.com';
+const LINKEDIN = 'https://www.linkedin.com/in/jisanz/';
+const FIRMA_NOMBRE = 'Jesús Ignacio Sanz';
 
-// Añade la web debajo de la firma "Jesús". Si el correo no tiene esa firma, la pone al final.
-function conFirma(cuerpo) {
-  const firma = /\n\nJesús(\n\n|$)/;
-  if (firma.test(cuerpo)) return cuerpo.replace(firma, (m, fin) => `\n\nJesús\n${WEB}${fin}`);
-  return `${cuerpo}\n\nJesús\n${WEB}`;
+const escHtml = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Texto visible de un enlace: sin https://, sin www., sin barra final ni parámetros
+function textoEnlace(url) {
+  return url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/$/, '');
 }
 
-function cuerpoConPie(correo) {
-  return `${conFirma(correo.cuerpo)}\n\n--\nRecibes este correo porque te apuntaste en estoybuscandotrabajo.com.\nSi no quieres recibir más: *|UNSUB|*\n*|LIST:ADDRESSLINE|*`;
+// Convierte las URLs de un párrafo en enlaces limpios
+function enlazar(parrafo) {
+  return escHtml(parrafo).replace(/https?:\/\/[^\s<]+/g, (url) => {
+    const real = url.replace(/&amp;/g, '&');
+    return `<a href="${escHtml(real)}" style="color:#1a56db">${escHtml(textoEnlace(real))}</a>`;
+  });
+}
+
+// Párrafos del correo, quitando la firma "Jesús" (se pone la firma completa en su sitio)
+function partes(correo) {
+  const parrafos = correo.cuerpo.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+  const i = parrafos.findIndex(p => p === 'Jesús' || p === FIRMA_NOMBRE);
+  if (i === -1) return { antes: parrafos, despues: [] };
+  return { antes: parrafos.slice(0, i), despues: parrafos.slice(i + 1) };
+}
+
+export function html(correo) {
+  const { antes, despues } = partes(correo);
+  const p = (t) => `<p style="margin:0 0 16px">${enlazar(t)}</p>`;
+  const firma = `<p style="margin:24px 0 16px">${FIRMA_NOMBRE}<br><a href="${LINKEDIN}" style="color:#1a56db">LinkedIn</a> · <a href="${WEB}" style="color:#1a56db">estoybuscandotrabajo.com</a></p>`;
+  const pie = `<p style="margin:40px 0 0;font-size:12px;line-height:1.5;color:#999">Recibes este correo porque te apuntaste en estoybuscandotrabajo.com. <a href="*|UNSUB|*" style="color:#999">Darte de baja</a>.<br>*|LIST:ADDRESSLINE|*</p>`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escHtml(correo.asunto)}</title></head>
+<body style="margin:0;padding:0;background:#ffffff">
+<div style="max-width:600px;margin:0 auto;padding:24px 20px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.55;color:#222">
+${antes.map(p).join('\n')}
+${firma}
+${despues.map(p).join('\n')}
+${pie}
+</div></body></html>`;
+}
+
+export function textoPlano(correo) {
+  const { antes, despues } = partes(correo);
+  return [...antes, `${FIRMA_NOMBRE}\nLinkedIn: ${LINKEDIN}\n${WEB}`, ...despues,
+    `--\nRecibes este correo porque te apuntaste en estoybuscandotrabajo.com.\nDarte de baja: *|UNSUB|*`].join('\n\n');
 }
 
 // Ids de las audiencias a las que va el correo diario
@@ -106,7 +141,7 @@ export function mailchimp() {
 
     crearCampania: async (listId, correo, { tituloExtra = '' } = {}) => {
       const c = await llamar('POST', '/campaigns', {
-        type: 'plaintext',
+        type: 'regular',
         recipients: { list_id: listId },
         settings: {
           subject_line: correo.asunto,
@@ -114,9 +149,9 @@ export function mailchimp() {
           from_name: config.remitente,
           reply_to: config.responderA
         },
-        tracking: { opens: false, text_clicks: true }
+        tracking: { opens: true, html_clicks: true, text_clicks: false }
       });
-      await llamar('PUT', `/campaigns/${c.id}/content`, { plain_text: cuerpoConPie(correo) });
+      await llamar('PUT', `/campaigns/${c.id}/content`, { html: html(correo), plain_text: textoPlano(correo) });
       return c.id;
     }
   };

@@ -30,7 +30,7 @@ export default async (req) => {
         return pagina('<h1>Prueba</h1><p class="no">Ya se mandó una prueba hace menos de 10 minutos. Espera un poco.</p>');
       }
       const id = await mc.crearCampania(listId, correo, { tituloExtra: ' (prueba)' });
-      await mc.llamar('POST', `/campaigns/${id}/actions/test`, { test_emails: [ajustes.emailPrueba], send_type: 'plaintext' });
+      await mc.llamar('POST', `/campaigns/${id}/actions/test`, { test_emails: [ajustes.emailPrueba], send_type: 'html' });
       return pagina(`<h1>Prueba enviada</h1><p class="ok">El correo ${correo.id}, "${esc(correo.asunto)}", se ha mandado solo a ${esc(ajustes.emailPrueba)}.</p><p>No se ha enviado nada a ninguna audiencia.</p>`);
     } catch (err) {
       console.error(err);
