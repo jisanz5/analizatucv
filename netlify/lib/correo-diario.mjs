@@ -40,6 +40,8 @@ const escHtml = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 
 // Texto visible de un enlace: sin https://, sin www., sin barra final ni parámetros
 function textoEnlace(url) {
+  // Las páginas de acompañamiento 1 a 1 se muestran solo con el dominio (su dirección dice "mentoria")
+  if (/\/mentoria-/.test(url)) return 'estoybuscandotrabajo.com';
   return url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/$/, '');
 }
 
