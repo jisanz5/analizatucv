@@ -42,6 +42,7 @@ const escHtml = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 function textoEnlace(url) {
   // Las páginas de acompañamiento 1 a 1 se muestran solo con el dominio (su dirección dice "mentoria")
   if (/\/mentoria-/.test(url)) return 'estoybuscandotrabajo.com';
+  if (/calendar\.app\.google|calendly\.com/.test(url)) return 'mi agenda';
   return url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/$/, '');
 }
 
