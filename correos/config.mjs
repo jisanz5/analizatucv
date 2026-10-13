@@ -7,7 +7,7 @@ export default {
   activo: true,
   audiencias: 'todas',
   remitente: 'Jesús Ignacio',
-  responderA: 'jesusignacio@saanz.es',
+  responderA: 'jesus@estoybuscandotrabajo.com',
   emailPrueba: 'jesusignacio@saanz.es',
   horaEnvioMadrid: 16,
   minutoEnvioMadrid: 10
