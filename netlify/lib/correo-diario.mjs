@@ -32,7 +32,7 @@ export function titulo(correo) {
   return `Diario ${correo.fecha} · ${correo.id}`;
 }
 
-const WEB = 'https://www.estoybuscandotrabajo.com';
+const WEB = 'https://jesusignaciosanz.com';
 const LINKEDIN = 'https://www.linkedin.com/in/jisanz/';
 const FIRMA_NOMBRE = 'Jesús Ignacio Sanz';
 
@@ -65,7 +65,7 @@ function partes(correo) {
 export function html(correo) {
   const { antes, despues } = partes(correo);
   const p = (t) => `<p style="margin:0 0 16px">${enlazar(t)}</p>`;
-  const firma = `<p style="margin:24px 0 16px">${FIRMA_NOMBRE}<br><a href="${LINKEDIN}" style="color:#1a56db">LinkedIn</a> · <a href="${WEB}" style="color:#1a56db">estoybuscandotrabajo.com</a></p>`;
+  const firma = `<p style="margin:24px 0 16px">${FIRMA_NOMBRE}<br><a href="${LINKEDIN}" style="color:#1a56db">LinkedIn</a> · <a href="${WEB}" style="color:#1a56db">jesusignaciosanz.com</a></p>`;
   const pie = `<p style="margin:40px 0 0;font-size:12px;line-height:1.5;color:#999">Recibes este correo porque te apuntaste en estoybuscandotrabajo.com. <a href="*|UNSUB|*" style="color:#999">Darte de baja</a>.<br>*|LIST:ADDRESSLINE|*</p>`;
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escHtml(correo.asunto)}</title></head>
 <body style="margin:0;padding:0;background:#ffffff">
